@@ -1,0 +1,189 @@
+.green-light-diagnostics-button {
+  cursor: pointer;
+}
+
+.green-light-diagnostics-button[data-has-record="true"] {
+  opacity: 0.85;
+}
+
+.green-light-diagnostics-button[data-has-record="false"] {
+  opacity: 0.35;
+}
+
+.green-light-diagnostics-panel {
+  position: fixed;
+  inset: 5dvh max(16px, 8vw);
+  z-index: 4000;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  color: var(--SmartThemeBodyColor);
+  background: var(--SmartThemeBlurTintColor);
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 35%);
+}
+
+.green-light-diagnostics-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
+
+.green-light-diagnostics-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0;
+}
+
+.green-light-diagnostics-subtitle,
+.green-light-diagnostics-item-meta,
+.green-light-diagnostics-item-reason {
+  opacity: 0.78;
+}
+
+.green-light-diagnostics-close,
+.green-light-diagnostics-filter,
+.green-light-diagnostics-jump {
+  min-height: 28px;
+  color: var(--SmartThemeBodyColor);
+  background: var(--SmartThemeQuoteColor);
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 6px;
+}
+
+.green-light-diagnostics-body {
+  display: grid;
+  grid-template-columns: minmax(240px, 38%) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.green-light-diagnostics-list,
+.green-light-diagnostics-detail {
+  min-width: 0;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.green-light-diagnostics-detail {
+  border-left: 1px solid var(--SmartThemeBorderColor);
+}
+
+.green-light-diagnostics-summary {
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.green-light-diagnostics-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.green-light-diagnostics-filter[data-active="true"] {
+  outline: 2px solid var(--SmartThemeBodyColor);
+  outline-offset: -2px;
+}
+
+.green-light-diagnostics-item {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 8px;
+}
+
+.green-light-diagnostics-item-header,
+.green-light-diagnostics-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.green-light-diagnostics-item-title,
+.green-light-diagnostics-snippet,
+.green-light-diagnostics-empty {
+  overflow-wrap: anywhere;
+}
+
+.green-light-diagnostics-snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: pre-wrap;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+@media (max-width: 600px) {
+  .green-light-diagnostics-panel {
+    inset: env(safe-area-inset-top) 0 0 0;
+    width: 100dvw;
+    height: calc(100dvh - env(safe-area-inset-top));
+    border-radius: 0;
+  }
+
+  .green-light-diagnostics-body {
+    display: block;
+    overflow-y: auto;
+  }
+
+  .green-light-diagnostics-list,
+  .green-light-diagnostics-detail {
+    padding: 10px;
+    overflow: visible;
+  }
+
+  .green-light-diagnostics-detail {
+    display: none;
+  }
+}
+
+.green-light-diagnostics-settings {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.green-light-diagnostics-settings h3,
+.green-light-diagnostics-settings-description {
+  margin: 0;
+}
+
+.green-light-diagnostics-setting-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.green-light-diagnostics-setting-row input[type="number"] {
+  width: 76px;
+}
+
+.green-light-diagnostics-settings-stats {
+  display: grid;
+  gap: 4px;
+  opacity: 0.86;
+}
+
+.green-light-diagnostics-settings-warning {
+  color: var(--warning);
+}
+
+.green-light-diagnostics-clear {
+  justify-self: start;
+  min-height: 30px;
+  color: var(--SmartThemeBodyColor);
+  background: var(--SmartThemeQuoteColor);
+  border: 1px solid var(--SmartThemeBorderColor);
+  border-radius: 6px;
+}

@@ -1,0 +1,16 @@
+{
+  "display_name": "绿灯激活诊断器",
+  "loading_order": 50,
+  "requires": [],
+  "optional": [],
+  "generate_interceptor": "greenLightActivationDiagnostics_captureGenerationInput",
+  "js": "index.js",
+  "css": "style.css",
+  "author": "noz",
+  "version": "0.1.0",
+  "homePage": "https://github.com/noz/green-light-activation-diagnostics",
+  "auto_update": true,
+  "hooks": {
+    "activate": "activateGreenLightActivationDiagnostics"
+  }
+}
