@@ -1,22 +1,12 @@
-const FILTERS = Object.freeze([
-  { id: 'all', label: '全部' },
-  { id: 'joined', label: '已加入' },
-  { id: 'matched_not_joined', label: '命中未加入' },
-  { id: 'non_chat_source', label: '非聊天来源' },
-]);
+import { getI18n } from './i18n.js';
 
-const STATUS_LABELS = Object.freeze({
-  joined: '已加入',
-  matched_not_joined: '命中未加入',
-});
+const FILTER_IDS = Object.freeze(['joined', 'matched_not_joined']);
+let popupDepsPromise = null;
 
-const REASON_LABELS = Object.freeze({
-  native_joined: '原生确认已加入',
-  probability_failed: '命中但概率失败',
-  group_loser: '命中但分组落选',
-  budget_blocked: '命中但预算挡下',
-  matched_not_joined_unknown: '命中未加入',
-});
+async function loadPopupDeps() {
+  popupDepsPromise ??= import('../../../../popup.js');
+  return popupDepsPromise;
+}
 
 function getViewportWidth(viewportWidth) {
   if (Number.isFinite(Number(viewportWidth))) return Number(viewportWidth);
@@ -27,29 +17,32 @@ function getPrimaryKey(item) {
   return item.pluginExplanation?.primaryMatches?.[0]?.key ?? '';
 }
 
-function getReasonText(item) {
+function getFilters(i18n) {
+  return FILTER_IDS.map(id => ({ id, label: i18n.filters[id] }));
+}
+
+function getReasonText(item, i18n) {
   const nativeReason = item.nativeConfirmation?.reasonType;
   if (nativeReason && nativeReason !== 'native_joined') {
-    return REASON_LABELS[nativeReason] ?? '命中未加入';
+    return i18n.reasons[nativeReason] ?? i18n.fallbackBlockedReason;
   }
 
   const explanation = item.pluginExplanation ?? {};
   const key = getPrimaryKey(item);
   if (explanation.sourceType === 'chat' && explanation.sourceMessageIndex != null) {
-    return `第 ${explanation.sourceMessageIndex} 楼命中「${key}」`;
+    return i18n.chatMatch({ messageIndex: explanation.sourceMessageIndex, key });
   }
-  if (explanation.sourceType === 'recursion') return '递归触发';
-  if (explanation.sourceType) return `非聊天来源：${explanation.sourceType}`;
-  return '暂无可解释来源';
+  if (explanation.sourceType === 'recursion') return i18n.recursion;
+  if (explanation.sourceType) return i18n.nonChatSource(explanation.sourceType);
+  return i18n.noExplainableSource;
 }
 
-function toItemModel(item) {
+function toItemModel(item, i18n) {
   return {
     ...item,
-    statusLabel: STATUS_LABELS[item.nativeConfirmation?.status] ?? '未知',
-    reasonText: getReasonText(item),
+    statusLabel: i18n.status[item.nativeConfirmation?.status] ?? i18n.unknown,
+    reasonText: getReasonText(item, i18n),
     primaryKey: getPrimaryKey(item),
-    expanded: false,
   };
 }
 
@@ -60,54 +53,47 @@ function filterItems(items, filter) {
   if (filter === 'matched_not_joined') {
     return items.filter(item => item.nativeConfirmation?.status === 'matched_not_joined');
   }
-  if (filter === 'non_chat_source') {
-    return items.filter(item => {
-      const sourceType = item.pluginExplanation?.sourceType;
-      return sourceType && !['chat', 'recursion'].includes(sourceType);
-    });
-  }
   return items;
 }
 
 export function createPanelModel(record, {
   messageId,
-  filter = 'all',
+  filter = 'joined',
   viewportWidth,
-  selectedEntryKey,
+  locale,
 } = {}) {
-  const width = getViewportWidth(viewportWidth);
-  const layout = width <= 600 ? 'mobile' : 'desktop';
-  const subtitle = messageId == null ? '本次 AI 回复生成前' : `第 ${messageId} 楼 · 本次 AI 回复生成前`;
+  const i18n = getI18n(locale).panel;
+  const subtitle = i18n.subtitle(messageId);
 
   if (!record) {
     return {
-      title: '绿灯激活诊断',
+      title: i18n.title,
       subtitle,
-      layout,
       noRecord: true,
-      message: '本条消息没有绿灯诊断记录',
-      filters: FILTERS,
+      message: i18n.noRecord,
+      filters: getFilters(i18n),
       activeFilter: filter,
       items: [],
-      selectedItem: null,
-      cardsExpandable: layout === 'mobile',
+      joinedCount: 0,
+      notJoinedCount: 0,
     };
   }
 
-  const items = filterItems((record.items ?? []).map(toItemModel), filter);
-  const selectedItem = items.find(item => item.entryKey === selectedEntryKey) ?? items[0] ?? null;
+  const allItems = (record.items ?? []).map(item => toItemModel(item, i18n));
+  const items = filterItems(allItems, filter);
+  const joinedCount = allItems.filter(item => item.nativeConfirmation?.status === 'joined').length;
+  const notJoinedCount = allItems.filter(item => item.nativeConfirmation?.status === 'matched_not_joined').length;
 
   return {
-    title: '绿灯激活诊断',
+    title: i18n.title,
     subtitle,
-    layout,
     noRecord: false,
-    summaryText: record.summaryText ?? '',
-    filters: FILTERS,
+    joinedCount,
+    notJoinedCount,
+    filters: getFilters(i18n),
     activeFilter: filter,
+    filterNote: i18n.filterNotes[filter] ?? '',
     items,
-    selectedItem,
-    cardsExpandable: layout === 'mobile',
   };
 }
 
@@ -118,44 +104,49 @@ function element(document, tagName, className, text) {
   return node;
 }
 
-function renderItem(document, item, onJumpToMessage) {
-  const card = element(document, 'article', 'green-light-diagnostics-item');
+function renderItem(document, item) {
+  const card = element(document, 'details', 'green-light-diagnostics-item');
+  const summary = element(document, 'summary', 'green-light-diagnostics-item-summary');
+  
   const header = element(document, 'div', 'green-light-diagnostics-item-header');
-  header.append(
-    element(document, 'div', 'green-light-diagnostics-item-title', item.name),
-    element(document, 'div', 'green-light-diagnostics-item-status', item.statusLabel),
-  );
+  
+  const isJoined = item.nativeConfirmation?.status === 'joined';
+  const icon = element(document, 'div', 'green-light-diagnostics-status-icon');
+  icon.dataset.status = isJoined ? 'joined' : 'not_joined';
+  
+  const titleText = element(document, 'div', 'green-light-diagnostics-item-title', item.name);
+  const worldText = element(document, 'div', 'green-light-diagnostics-item-world', item.world);
+  
+  header.append(icon, titleText, worldText);
+  summary.append(header);
 
-  const meta = element(document, 'div', 'green-light-diagnostics-item-meta');
-  meta.append(
-    element(document, 'span', '', item.world),
-    element(document, 'span', '', `UID ${item.uid ?? '?'}`),
-  );
-
+  const detailBody = element(document, 'div', 'green-light-diagnostics-item-details');
   const reason = element(document, 'div', 'green-light-diagnostics-item-reason', item.reasonText);
-  const snippet = element(document, 'div', 'green-light-diagnostics-snippet', item.pluginExplanation?.snippet ?? '');
-  card.append(header, meta, reason, snippet);
+  
+  detailBody.append(reason);
 
-  if (item.pluginExplanation?.sourceMessageIndex != null && onJumpToMessage) {
-    const jump = element(document, 'button', 'green-light-diagnostics-jump', '跳到来源楼层');
-    jump.addEventListener('click', () => onJumpToMessage(item.pluginExplanation.sourceMessageIndex));
-    card.append(jump);
+  if (item.pluginExplanation?.snippet) {
+    const snippet = element(document, 'blockquote', 'green-light-diagnostics-snippet', item.pluginExplanation.snippet);
+    detailBody.append(snippet);
   }
 
+  card.append(summary, detailBody);
   return card;
 }
 
-export function openDiagnosticsPanel({
+function buildPanelContent({
   record,
   messageId,
-  onJumpToMessage,
   document = globalThis.document,
+  activeFilter = 'joined',
+  onFilterChange,
+  onClose,
+  locale,
 } = {}) {
-  const existing = document.querySelector?.('.green-light-diagnostics-panel');
-  existing?.remove?.();
-
-  const model = createPanelModel(record, { messageId });
-  const panel = element(document, 'section', 'green-light-diagnostics-panel');
+  const i18n = getI18n(locale).panel;
+  const model = createPanelModel(record, { messageId, filter: activeFilter, locale });
+  const container = element(document, 'section', 'green-light-diagnostics-panel-content');
+  
   const header = element(document, 'header', 'green-light-diagnostics-header');
   const titleBlock = element(document, 'div', 'green-light-diagnostics-title-block');
   titleBlock.append(
@@ -163,32 +154,108 @@ export function openDiagnosticsPanel({
     element(document, 'div', 'green-light-diagnostics-subtitle', model.subtitle),
   );
 
-  const close = element(document, 'button', 'green-light-diagnostics-close', '关闭');
-  close.addEventListener('click', () => panel.remove());
+  const close = element(document, 'button', 'green-light-diagnostics-close');
+  close.title = i18n.close;
+  close.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+  close.addEventListener('click', () => onClose?.());
   header.append(titleBlock, close);
-
+  
   const body = element(document, 'div', 'green-light-diagnostics-body');
   if (model.noRecord) {
     body.append(element(document, 'div', 'green-light-diagnostics-empty', model.message));
   } else {
-    const list = element(document, 'div', 'green-light-diagnostics-list');
-    const summary = element(document, 'pre', 'green-light-diagnostics-summary', model.summaryText);
+    const overview = element(document, 'div', 'green-light-diagnostics-overview');
+    
+    const joinedStat = element(document, 'div', 'green-light-diagnostics-stat');
+    joinedStat.append(
+      element(document, 'div', 'green-light-diagnostics-stat-value', model.joinedCount),
+      element(document, 'div', 'green-light-diagnostics-stat-label', i18n.statJoined)
+    );
+    
+    const notJoinedStat = element(document, 'div', 'green-light-diagnostics-stat');
+    notJoinedStat.append(
+      element(document, 'div', 'green-light-diagnostics-stat-value', model.notJoinedCount),
+      element(document, 'div', 'green-light-diagnostics-stat-label', i18n.statBlocked)
+    );
+    
+    overview.append(joinedStat, notJoinedStat);
+
     const filters = element(document, 'div', 'green-light-diagnostics-filters');
     for (const filter of model.filters) {
-      const button = element(document, 'button', 'green-light-diagnostics-filter', filter.label);
-      button.dataset.active = filter.id === model.activeFilter ? 'true' : 'false';
-      filters.append(button);
+      const tab = element(document, 'span', 'green-light-diagnostics-filter-tab', filter.label);
+      tab.dataset.active = filter.id === model.activeFilter ? 'true' : 'false';
+      tab.addEventListener('click', () => {
+        onFilterChange?.(filter.id);
+      });
+      filters.append(tab);
     }
-    list.append(summary, filters, ...model.items.map(item => renderItem(document, item, onJumpToMessage)));
 
-    const detail = element(document, 'aside', 'green-light-diagnostics-detail');
-    if (model.selectedItem) {
-      detail.append(renderItem(document, model.selectedItem, onJumpToMessage));
-    }
-    body.append(list, detail);
+    const filterNote = model.filterNote
+      ? element(document, 'div', 'green-light-diagnostics-filter-note', model.filterNote)
+      : null;
+    
+    const list = element(document, 'div', 'green-light-diagnostics-list');
+    list.append(...model.items.map(item => renderItem(document, item)));
+
+    body.append(overview, filters);
+    if (filterNote) body.append(filterNote);
+    body.append(list);
   }
 
-  panel.append(header, body);
-  document.body.appendChild(panel);
-  return panel;
+  container.append(header, body);
+  return container;
+}
+
+export function openDiagnosticsPanel({
+  record,
+  messageId,
+  document = globalThis.document,
+  activeFilter = 'joined',
+  locale,
+  popupDeps,
+} = {}) {
+  let currentFilter = activeFilter;
+  let currentPopup = null;
+  const popupDepsLoader = popupDeps ? Promise.resolve(popupDeps) : loadPopupDeps();
+
+  async function showWithFilter(filter) {
+    currentFilter = filter;
+    const { Popup, POPUP_TYPE } = await popupDepsLoader;
+    
+    const content = buildPanelContent({
+      record,
+      messageId,
+      document,
+      activeFilter: currentFilter,
+      locale,
+      onFilterChange: (newFilter) => {
+        if (currentPopup) {
+          currentPopup.completeCancelled();
+        }
+        void showWithFilter(newFilter);
+      },
+      onClose: () => {
+        if (currentPopup) {
+          currentPopup.completeCancelled();
+        }
+      }
+    });
+
+    currentPopup = new Popup(content, POPUP_TYPE.DISPLAY, '', {
+      transparent: true,
+      large: false,
+      allowVerticalScrolling: true,
+      animation: 'fast',
+    });
+
+    // Add a marker class to the dialog wrapper so we can style the <dialog> itself
+    if (currentPopup.dlg) {
+      currentPopup.dlg.classList.add('green-light-diagnostics-popup-wrapper');
+    }
+
+    currentPopup.show();
+    return currentPopup;
+  }
+
+  return showWithFilter(currentFilter);
 }

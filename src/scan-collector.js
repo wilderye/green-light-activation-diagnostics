@@ -10,6 +10,32 @@ function cloneEntries(entries) {
   return Array.from(entries ?? []).map(clone);
 }
 
+function collectTimedEffectEntries(timedEffects, entries) {
+  const result = {
+    sticky: [],
+    cooldown: [],
+    delay: [],
+  };
+
+  if (!timedEffects || typeof timedEffects.isEffectActive !== 'function') {
+    return result;
+  }
+
+  for (const entry of entries ?? []) {
+    for (const type of Object.keys(result)) {
+      try {
+        if (timedEffects.isEffectActive(type, entry)) {
+          result[type].push(entry);
+        }
+      } catch {
+        // SillyTavern's timed effect manager is an internal object; ignore shape changes.
+      }
+    }
+  }
+
+  return result;
+}
+
 export function createScanCollector() {
   let current = null;
 
@@ -22,10 +48,12 @@ export function createScanCollector() {
 
     const all = payload?.new?.all ?? [];
     const successful = payload?.new?.successful ?? [];
+    const sortedEntries = payload?.sortedEntries ?? [];
     const successfulKeys = new Set(successful.map(entryKey));
     const activatedEntries = payload?.activated?.entries instanceof Map
       ? payload.activated.entries.values()
       : payload?.activated?.entries;
+    const timedEffectEntries = collectTimedEffectEntries(payload?.timedEffects, sortedEntries);
 
     current.loops.push({
       loopCount: payload?.state?.loopCount ?? current.loops.length + 1,
@@ -36,10 +64,14 @@ export function createScanCollector() {
       probabilityFailed: cloneEntries(all.filter(entry => !successfulKeys.has(entryKey(entry)))),
       activatedEntries: cloneEntries(activatedEntries),
       activatedText: String(payload?.activated?.text ?? ''),
-      sortedEntries: cloneEntries(payload?.sortedEntries),
+      sortedEntries: cloneEntries(sortedEntries),
       budget: clone(payload?.budget ?? {}),
       recursionDelay: clone(payload?.recursionDelay ?? {}),
-      timedEffects: clone(payload?.timedEffects ?? {}),
+      timedEffectEntries: {
+        sticky: cloneEntries(timedEffectEntries.sticky),
+        cooldown: cloneEntries(timedEffectEntries.cooldown),
+        delay: cloneEntries(timedEffectEntries.delay),
+      },
     });
   }
 

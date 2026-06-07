@@ -1,0 +1,15 @@
+node_modules/
+*.log
+
+# Local SillyTavern source copies used while developing/testing this extension.
+SillyTavern-*/
+
+# Local manual-test helpers; keep them out of the public extension install.
+docs/
+tests/
+test-assets/
+settings-scroll.html
+
+# OS/editor noise.
+.DS_Store
+Thumbs.db

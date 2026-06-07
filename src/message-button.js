@@ -1,4 +1,7 @@
-export function injectMessageButtons({ root = document, onClick, hasRecord } = {}) {
+import { getI18n } from './i18n.js';
+
+export function injectMessageButtons({ root = document, onClick, hasRecord, locale } = {}) {
+  const i18n = getI18n(locale).messageButton;
   const messages = root.querySelectorAll?.('#chat .mes[mesid][is_user="false"], .mes[mesid][is_user="false"]') ?? [];
 
   for (const message of messages) {
@@ -12,13 +15,14 @@ export function injectMessageButtons({ root = document, onClick, hasRecord } = {
     const existing = container.querySelector?.('.green-light-diagnostics-button');
     if (existing) {
       existing.dataset.hasRecord = hasRecord?.({ messageId, swipeId }) ? 'true' : 'false';
+      existing.title = i18n.title;
       continue;
     }
 
     const ownerDocument = message.ownerDocument ?? root.ownerDocument ?? document;
     const button = ownerDocument.createElement('div');
     button.className = 'mes_button green-light-diagnostics-button fa-solid fa-traffic-light';
-    button.title = '绿灯激活诊断';
+    button.title = i18n.title;
     button.dataset.hasRecord = hasRecord?.({ messageId, swipeId }) ? 'true' : 'false';
     button.addEventListener('click', event => {
       event.preventDefault();

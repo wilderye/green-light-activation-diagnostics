@@ -3,11 +3,9 @@ import { createScanCollector } from './scan-collector.js';
 import { createMatcher } from './matcher.js';
 import { buildDiagnosticRecord } from './diagnostic-builder.js';
 import {
-  clearChatDiagnostics,
-  getDiagnosticsStats,
+  createTemporaryDiagnosticsStore,
+  getChatStorageScope,
   getSwipeId,
-  readDiagnosticRecord,
-  writeDiagnosticRecord,
 } from './storage.js';
 import {
   confirmAndClearDiagnostics,
@@ -25,12 +23,20 @@ export function createExtensionController(nativeDeps = {}) {
   const documentRef = nativeDeps.document ?? globalThis.document;
   const settingsStore = nativeDeps.extension_settings ?? {};
   const settings = getSettings(settingsStore);
+  const diagnosticsStore = nativeDeps.diagnosticsStore ?? createTemporaryDiagnosticsStore({
+    storage: nativeDeps.localStorage,
+    getScopeKey: () => nativeDeps.getDiagnosticsScope?.() ?? getChatStorageScope(nativeDeps.chat ?? []),
+  });
   let activated = false;
   let stopObserving = null;
   let settingsPanel = null;
 
+  function getLocale() {
+    return nativeDeps.getLocale?.() ?? nativeDeps.locale;
+  }
+
   function refreshSettingsPanel() {
-    const stats = getDiagnosticsStats(nativeDeps.chat ?? []);
+    const stats = diagnosticsStore.getDiagnosticsStats();
     nativeDeps.onStatsRefresh?.(stats);
 
     if (!documentRef) return;
@@ -39,6 +45,7 @@ export function createExtensionController(nativeDeps = {}) {
       document: documentRef,
       settings,
       stats,
+      locale: getLocale(),
       onChange: (key, value) => {
         updateSetting(settings, key, value, nativeDeps.saveSettingsDebounced);
         refreshSettingsPanel();
@@ -46,10 +53,8 @@ export function createExtensionController(nativeDeps = {}) {
       onClear: async () => {
         await confirmAndClearDiagnostics({
           confirm: nativeDeps.confirm ?? globalThis.confirm,
-          clearChatDiagnostics,
-          chat: nativeDeps.chat ?? [],
-          syncMesToSwipe: nativeDeps.syncMesToSwipe,
-          saveChatConditional: nativeDeps.saveChatConditional,
+          clearDiagnostics: diagnosticsStore.clearDiagnostics,
+          locale: getLocale(),
         });
         refreshButtons();
         refreshSettingsPanel();
@@ -61,7 +66,11 @@ export function createExtensionController(nativeDeps = {}) {
     if (!root) return;
     injectMessageButtons({
       root,
-      hasRecord: ({ messageId }) => Boolean(readDiagnosticRecord(nativeDeps.chat?.[messageId])),
+      locale: getLocale(),
+      hasRecord: ({ messageId, swipeId }) => Boolean(diagnosticsStore.readDiagnosticRecord({
+        messageId,
+        swipeId: swipeId ?? getSwipeId(nativeDeps.chat?.[messageId]),
+      })),
       onClick: ({ messageId }) => {
         openDiagnosticsForMessage(messageId);
       },
@@ -74,11 +83,15 @@ export function createExtensionController(nativeDeps = {}) {
   }
 
   function openDiagnosticsForMessage(messageId) {
-    const record = readDiagnosticRecord(nativeDeps.chat?.[messageId]);
+    const record = diagnosticsStore.readDiagnosticRecord({
+      messageId,
+      swipeId: getSwipeId(nativeDeps.chat?.[messageId]),
+    });
     openDiagnosticsPanel({
       record,
       messageId,
       document: documentRef,
+      locale: getLocale(),
       onJumpToMessage: jumpToMessage,
     });
   }
@@ -87,6 +100,12 @@ export function createExtensionController(nativeDeps = {}) {
     const collected = collector.finish();
     if (collected && settings.enabled && settings.saveDiagnostics) {
       const message = nativeDeps.chat?.[messageId];
+      if (!message) {
+        refreshButtons();
+        refreshSettingsPanel();
+        return;
+      }
+
       const swipeId = getSwipeId(message);
       const record = buildDiagnosticRecord({
         collected,
@@ -94,18 +113,17 @@ export function createExtensionController(nativeDeps = {}) {
         settings,
         messageId,
         swipeId,
+        locale: getLocale(),
       });
 
       if (settings.includeMatchedNotJoined === false) {
         record.items = record.items.filter(item => item.nativeConfirmation.status === 'joined');
       }
 
-      await writeDiagnosticRecord({
-        chat: nativeDeps.chat ?? [],
+      diagnosticsStore.writeDiagnosticRecord({
         messageId,
+        swipeId,
         record,
-        syncMesToSwipe: nativeDeps.syncMesToSwipe,
-        saveChatConditional: nativeDeps.saveChatConditional,
       });
     }
 

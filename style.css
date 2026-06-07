@@ -1,3 +1,11 @@
+:root {
+  --gl-grid-1: 8px;
+  --gl-grid-2: 16px;
+  --gl-grid-3: 24px;
+  --gl-grid-4: 32px;
+  --gl-grid-6: 48px;
+}
+
 .green-light-diagnostics-button {
   cursor: pointer;
 }
@@ -10,147 +18,290 @@
   opacity: 0.35;
 }
 
-.green-light-diagnostics-panel {
-  position: fixed;
-  inset: 5dvh max(16px, 8vw);
-  z-index: 4000;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
+/* ─── Native Popup Override (Turns the ST shell into our card) ─── */
+dialog.popup.green-light-diagnostics-popup-wrapper {
+  width: 90vw !important;
+  max-width: 540px !important;
+  max-height: 85vh !important;
+  
+  background: var(--SmartThemeBlurTintColor) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25), 0 0 0 1px color-mix(in srgb, var(--SmartThemeBodyColor) 5%, transparent) !important;
+  
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Clear ST internal paddings */
+.green-light-diagnostics-popup-wrapper .popup-body,
+.green-light-diagnostics-popup-wrapper .popup-content {
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Hide native close button */
+.green-light-diagnostics-popup-wrapper .popup-button-close {
+  display: none !important;
+}
+
+/* ─── Panel Content ─── */
+.green-light-diagnostics-panel-content {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   color: var(--SmartThemeBodyColor);
-  background: var(--SmartThemeBlurTintColor);
-  border: 1px solid var(--SmartThemeBorderColor);
-  border-radius: 8px;
-  box-shadow: 0 8px 32px rgb(0 0 0 / 35%);
+  font-family: inherit;
 }
 
 .green-light-diagnostics-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--SmartThemeBorderColor);
+  padding: var(--gl-grid-4) var(--gl-grid-4) var(--gl-grid-2) var(--gl-grid-4);
+  flex-shrink: 0;
 }
 
-.green-light-diagnostics-header h2 {
+.green-light-diagnostics-title-block h2 {
   margin: 0;
-  font-size: 1.1rem;
-  letter-spacing: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.5px;
 }
 
-.green-light-diagnostics-subtitle,
-.green-light-diagnostics-item-meta,
-.green-light-diagnostics-item-reason {
-  opacity: 0.78;
+.green-light-diagnostics-subtitle {
+  opacity: 0.5;
+  font-size: 0.75rem;
+  margin-top: 4px;
 }
 
-.green-light-diagnostics-close,
-.green-light-diagnostics-filter,
-.green-light-diagnostics-jump {
-  min-height: 28px;
+.green-light-diagnostics-close {
+  background: transparent;
+  border: none;
   color: var(--SmartThemeBodyColor);
-  background: var(--SmartThemeQuoteColor);
-  border: 1px solid var(--SmartThemeBorderColor);
-  border-radius: 6px;
+  opacity: 0.4;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.green-light-diagnostics-close:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--SmartThemeBodyColor) 8%, transparent);
 }
 
 .green-light-diagnostics-body {
-  display: grid;
-  grid-template-columns: minmax(240px, 38%) minmax(0, 1fr);
-  min-height: 0;
-}
-
-.green-light-diagnostics-list,
-.green-light-diagnostics-detail {
-  min-width: 0;
-  padding: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--gl-grid-4) var(--gl-grid-4) var(--gl-grid-4);
   overflow-y: auto;
+  scrollbar-width: none;
 }
 
-.green-light-diagnostics-detail {
-  border-left: 1px solid var(--SmartThemeBorderColor);
+.green-light-diagnostics-body::-webkit-scrollbar {
+  display: none;
 }
 
-.green-light-diagnostics-summary {
-  margin: 0 0 10px;
-  white-space: pre-wrap;
-  word-break: break-word;
+.green-light-diagnostics-overview {
+  display: flex;
+  gap: var(--gl-grid-6);
+  padding-bottom: var(--gl-grid-2);
+}
+
+.green-light-diagnostics-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.green-light-diagnostics-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.green-light-diagnostics-stat-label {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  margin-top: 2px;
 }
 
 .green-light-diagnostics-filters {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--gl-grid-3);
+  padding-bottom: var(--gl-grid-3);
 }
 
-.green-light-diagnostics-filter[data-active="true"] {
-  outline: 2px solid var(--SmartThemeBodyColor);
-  outline-offset: -2px;
+.green-light-diagnostics-filter-tab {
+  font-size: 0.9rem;
+  opacity: 0.45;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding-bottom: 4px;
+  position: relative;
+}
+
+.green-light-diagnostics-filter-tab:hover {
+  opacity: 0.8;
+}
+
+.green-light-diagnostics-filter-tab[data-active="true"] {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.green-light-diagnostics-filter-tab[data-active="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--SmartThemeBodyColor);
+  box-shadow: 0 0 4px var(--SmartThemeBodyColor);
+}
+
+.green-light-diagnostics-filter-note {
+  margin: 0 0 var(--gl-grid-2) 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  opacity: 0.62;
+}
+
+.green-light-diagnostics-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .green-light-diagnostics-item {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-  padding: 10px;
-  margin-bottom: 8px;
-  border: 1px solid var(--SmartThemeBorderColor);
-  border-radius: 8px;
+  background: transparent;
+  border-radius: var(--gl-grid-1);
+  overflow: hidden;
+  transition: background 0.2s;
 }
 
-.green-light-diagnostics-item-header,
-.green-light-diagnostics-item-meta {
+.green-light-diagnostics-item:hover {
+  background: color-mix(in srgb, var(--SmartThemeBodyColor) 3%, transparent);
+}
+
+.green-light-diagnostics-item[open] {
+  background: color-mix(in srgb, var(--SmartThemeBodyColor) 4%, transparent);
+  margin: 4px 0;
+}
+
+.green-light-diagnostics-item-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px var(--gl-grid-2);
+  user-select: none;
+  outline: none;
+}
+
+.green-light-diagnostics-item-summary::-webkit-details-marker {
+  display: none;
+}
+
+.green-light-diagnostics-item-header {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: baseline;
-  justify-content: space-between;
-  min-width: 0;
+  align-items: center;
+  gap: var(--gl-grid-1);
 }
 
-.green-light-diagnostics-item-title,
-.green-light-diagnostics-snippet,
-.green-light-diagnostics-empty {
-  overflow-wrap: anywhere;
+.green-light-diagnostics-status-icon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.green-light-diagnostics-status-icon[data-status="joined"] {
+  background: #6b8065;
+  box-shadow: 0 0 6px rgba(107, 128, 101, 0.6);
+}
+
+.green-light-diagnostics-status-icon[data-status="not_joined"] {
+  background: transparent;
+  border: 1.5px solid color-mix(in srgb, var(--SmartThemeBodyColor) 30%, transparent);
+  box-sizing: border-box;
+}
+
+.green-light-diagnostics-item-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.green-light-diagnostics-item-world {
+  opacity: 0.4;
+  font-size: 0.75rem;
+}
+
+.green-light-diagnostics-item-details {
+  padding: 0 var(--gl-grid-2) var(--gl-grid-2) calc(var(--gl-grid-2) + 10px + var(--gl-grid-1));
+  animation: gl-accordion-slide 0.2s ease-out;
+}
+
+@keyframes gl-accordion-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.green-light-diagnostics-item-reason {
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  opacity: 0.85;
 }
 
 .green-light-diagnostics-snippet {
-  display: -webkit-box;
-  overflow: hidden;
+  margin: 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid color-mix(in srgb, var(--SmartThemeBodyColor) 10%, transparent);
+  font-style: italic;
+  font-size: 0.8rem;
+  opacity: 0.5;
   white-space: pre-wrap;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  word-break: break-all;
+  max-height: 100px;
+  overflow-y: auto;
 }
 
-@media (max-width: 600px) {
-  .green-light-diagnostics-panel {
-    inset: env(safe-area-inset-top) 0 0 0;
-    width: 100dvw;
-    height: calc(100dvh - env(safe-area-inset-top));
-    border-radius: 0;
-  }
-
-  .green-light-diagnostics-body {
-    display: block;
-    overflow-y: auto;
-  }
-
-  .green-light-diagnostics-list,
-  .green-light-diagnostics-detail {
-    padding: 10px;
-    overflow: visible;
-  }
-
-  .green-light-diagnostics-detail {
-    display: none;
-  }
+.green-light-diagnostics-snippet::-webkit-scrollbar {
+  width: 4px;
 }
 
+.green-light-diagnostics-snippet::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--SmartThemeBodyColor) 20%, transparent);
+  border-radius: 4px;
+}
+
+/* Settings Panel (inside Extensions menu) */
 .green-light-diagnostics-settings {
   display: grid;
-  gap: 8px;
+  gap: var(--gl-grid-1);
   padding: 10px 0;
 }
 
@@ -161,12 +312,25 @@
 
 .green-light-diagnostics-setting-row {
   display: flex;
-  gap: 8px;
+  gap: var(--gl-grid-1);
   align-items: center;
 }
 
 .green-light-diagnostics-setting-row input[type="number"] {
   width: 76px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.green-light-diagnostics-setting-row input[type="number"]::-webkit-inner-spin-button,
+.green-light-diagnostics-setting-row input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.green-light-diagnostics-settings-note {
+  opacity: 0.72;
+  line-height: 1.45;
 }
 
 .green-light-diagnostics-settings-stats {
@@ -175,15 +339,13 @@
   opacity: 0.86;
 }
 
-.green-light-diagnostics-settings-warning {
-  color: var(--warning);
-}
-
 .green-light-diagnostics-clear {
   justify-self: start;
   min-height: 30px;
   color: var(--SmartThemeBodyColor);
   background: var(--SmartThemeQuoteColor);
-  border: 1px solid var(--SmartThemeBorderColor);
+  border: 1px solid color-mix(in srgb, var(--SmartThemeBodyColor) 20%, transparent);
   border-radius: 6px;
+  padding: 0 12px;
+  cursor: pointer;
 }

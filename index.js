@@ -4,9 +4,7 @@ import {
   event_types,
   extension_prompts,
   getCharacterCardFields,
-  saveChatConditional,
   saveSettingsDebounced,
-  syncMesToSwipe,
 } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 import { parseRegexFromString, world_info_logic, world_info_position } from '../../../world-info.js';
@@ -17,9 +15,7 @@ const nativeDeps = {
   event_types,
   extension_prompts,
   getCharacterCardFields,
-  saveChatConditional,
   saveSettingsDebounced,
-  syncMesToSwipe,
   extension_settings,
   parseRegexFromString,
   world_info_logic,

@@ -8,6 +8,4 @@ export const DEFAULT_SETTINGS = Object.freeze({
   includeMatchedNotJoined: true,
   includeSnippets: true,
   snippetRadius: 48,
-  warnAverageBytes: 20 * 1024,
-  warnTotalBytes: 2 * 1024 * 1024,
 });

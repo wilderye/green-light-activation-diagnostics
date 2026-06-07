@@ -1,5 +1,6 @@
 import { SCHEMA_VERSION } from './constants.js';
 import { classifyNativeOutcome, getEntryDisplayName, isGreenLightEntry } from './entry-utils.js';
+import { getI18n } from './i18n.js';
 import { entryKey } from './scan-collector.js';
 
 function compactMatch(match = {}) {
@@ -35,47 +36,105 @@ function countBy(items, predicate) {
   return items.filter(predicate).length;
 }
 
-function buildSummaryText(summary) {
+function formatSummaryParts(parts, i18n) {
+  const visibleParts = parts.filter(([, count]) => count > 0);
+  return (visibleParts.length ? visibleParts : parts)
+    .map(([label, count]) => `${label} ${i18n.unit(count)}`)
+    .join(' · ');
+}
+
+function getTimedEffectKeys(collected, type) {
+  return new Set((collected?.loops ?? []).flatMap(loop => (
+    loop.timedEffectEntries?.[type] ?? []
+  )).map(entryKey));
+}
+
+function hasSameGroupWinner(entry, collected = {}) {
+  const groups = String(entry?.group ?? '').split(',').map(group => group.trim()).filter(Boolean);
+  if (!groups.length) return false;
+
+  return (collected.finalActivatedEntries ?? []).some(item => {
+    if (entryKey(item) === entryKey(entry)) return false;
+    const itemGroups = new Set(String(item?.group ?? '').split(',').map(group => group.trim()).filter(Boolean));
+    return groups.some(group => itemGroups.has(group));
+  });
+}
+
+function isKnownEarlyFilter(entry, collected, pluginExplanation) {
+  if (pluginExplanation.reasonType === 'secondary_not_satisfied') return true;
+  if (hasSameGroupWinner(entry, collected)) return true;
+
+  const key = entryKey(entry);
+  if (getTimedEffectKeys(collected, 'cooldown').has(key)) return true;
+  if (getTimedEffectKeys(collected, 'delay').has(key)) return true;
+
+  const generationType = collected?.session?.generationType;
+  if (Array.isArray(entry?.triggers) && entry.triggers.length > 0 && generationType != null) {
+    return !entry.triggers.includes(generationType);
+  }
+
+  return false;
+}
+
+function buildSummaryText(summary, locale) {
+  const i18n = getI18n(locale).summary;
+  const labels = i18n.labels;
   const joinedParts = [
-    `关键词触发 ${summary.keywordTriggered} 条`,
-    `递归 ${summary.recursion} 条`,
-    `黏性延续 ${summary.sticky} 条`,
+    [labels.keywordTriggered, summary.keywordTriggered],
+    [labels.recursion, summary.recursion],
+    [labels.sticky, summary.sticky],
   ];
   const blockedParts = [
-    `概率失败 ${summary.probabilityFailed} 条`,
-    `预算挡下 ${summary.budgetBlocked} 条`,
-    `分组落选 ${summary.groupLoser} 条`,
+    [labels.secondaryBlocked, summary.secondaryBlocked],
+    [labels.probabilityFailed, summary.probabilityFailed],
+    [labels.budgetBlocked, summary.budgetBlocked],
+    [labels.groupLoser, summary.groupLoser],
+    [labels.timedEffectBlocked, summary.timedEffectBlocked],
+    [labels.generationTypeBlocked, summary.generationTypeBlocked],
   ];
 
   return [
-    `实际加入 ${summary.joined} 条：${joinedParts.join(' · ')}`,
-    `命中未加入 ${summary.matchedNotJoined} 条：${blockedParts.join(' · ')}`,
+    i18n.joinedLine({ count: summary.joined, parts: formatSummaryParts(joinedParts, i18n) }),
+    i18n.blockedLine({ count: summary.matchedNotJoined, parts: formatSummaryParts(blockedParts, i18n) }),
   ].join('\n');
 }
 
-export function buildDiagnosticRecord({ collected, matcher, settings, messageId, swipeId }) {
+export function buildDiagnosticRecord({ collected, matcher, settings, messageId, swipeId, locale }) {
   const session = collected?.session ?? {};
-  const seen = new Map();
+  const candidates = new Map();
 
   for (const loop of collected?.loops ?? []) {
     for (const entry of [...(loop.newAll ?? []), ...(loop.activatedEntries ?? [])]) {
-      if (isGreenLightEntry(entry)) seen.set(entryKey(entry), entry);
+      if (isGreenLightEntry(entry)) candidates.set(entryKey(entry), { entry });
     }
   }
 
   for (const entry of collected?.finalActivatedEntries ?? []) {
-    if (isGreenLightEntry(entry)) seen.set(entryKey(entry), entry);
+    if (isGreenLightEntry(entry)) candidates.set(entryKey(entry), { entry });
   }
 
   const recursionTexts = (collected?.loops ?? [])
     .map(loop => loop.activatedText)
     .filter(Boolean);
 
-  const items = [...seen.values()].map(entry => {
-    const nativeConfirmation = classifyNativeOutcome(entry, collected);
+  for (const loop of collected?.loops ?? []) {
+    for (const entry of loop.sortedEntries ?? []) {
+      const key = entryKey(entry);
+      if (candidates.has(key) || !isGreenLightEntry(entry)) continue;
+
+      const pluginExplanation = matcher.explainEntry(entry, session, recursionTexts, settings);
+      if (pluginExplanation.reasonType === 'unexplained') continue;
+      if (!isKnownEarlyFilter(entry, collected, pluginExplanation)) continue;
+
+      candidates.set(key, { entry, pluginExplanation });
+    }
+  }
+
+  const items = [...candidates.values()].map(({ entry, pluginExplanation: precomputedExplanation }) => {
     const pluginExplanation = compactExplanation(
-      matcher.explainEntry(entry, session, recursionTexts, settings),
+      precomputedExplanation ?? matcher.explainEntry(entry, session, recursionTexts, settings),
     );
+    const nativeConfirmation = classifyNativeOutcome(entry, collected, pluginExplanation);
 
     return {
       entryKey: entryKey(entry),
@@ -105,6 +164,9 @@ export function buildDiagnosticRecord({ collected, matcher, settings, messageId,
     probabilityFailed: countBy(items, item => item.nativeConfirmation.reasonType === 'probability_failed'),
     budgetBlocked: countBy(items, item => item.nativeConfirmation.reasonType === 'budget_blocked'),
     groupLoser: countBy(items, item => item.nativeConfirmation.reasonType === 'group_loser'),
+    secondaryBlocked: countBy(items, item => item.nativeConfirmation.reasonType === 'secondary_not_satisfied'),
+    timedEffectBlocked: countBy(items, item => ['cooldown_active', 'delay_active'].includes(item.nativeConfirmation.reasonType)),
+    generationTypeBlocked: countBy(items, item => item.nativeConfirmation.reasonType === 'generation_type_filtered'),
   };
 
   return {
@@ -114,7 +176,7 @@ export function buildDiagnosticRecord({ collected, matcher, settings, messageId,
     swipeId,
     generationType: session.generationType ?? 'normal',
     summary,
-    summaryText: buildSummaryText(summary),
+    summaryText: buildSummaryText(summary, locale),
     items,
   };
 }
