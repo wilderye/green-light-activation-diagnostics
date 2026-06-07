@@ -6,7 +6,7 @@
   "generate_interceptor": "greenLightActivationDiagnostics_captureGenerationInput",
   "js": "index.js",
   "css": "style.css",
-  "author": "noz",
+  "author": "荒行",
   "version": "0.1.0",
   "homePage": "https://github.com/noz/green-light-activation-diagnostics",
   "auto_update": true,
