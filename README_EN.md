@@ -13,7 +13,7 @@ If you use World Info, you've probably run into these situations:
 - You know how to check the prompt, but digging through it to find specific entries is tedious — especially when you have a lot of them
 - Can't figure out why a green-lit entry did or didn't trigger
 
-Green Light Activation Diagnostics adds a button to the `More` menu on each AI message. Click it and you'll see:
+Green Light Activation Diagnostics adds a button to the `More` menu on each AI reply. Click it and you'll see:
 
 - ✅ **Which entries triggered and made it into the prompt** (what keyword matched, which message triggered it)
 - ❌ **Which entries triggered but got blocked by rules** (probability didn't hit, got bumped by another entry in the same group, still on cooldown…)
