@@ -47,6 +47,10 @@ The panel is mobile-friendly.
 - **Auto-cleanup**: Records older than 7 days or exceeding 500 entries are automatically removed. You can also clear them manually in the settings panel.
 - **Accuracy**: "Which entries were sent to the AI" is 100% accurate — it comes from SillyTavern's own events. "Why an entry wasn't sent" is the plugin's own analysis — accurate in most cases, but some edge-case rules may not be fully covered.
 
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0-only).
+
 ## Author
 
 荒行 · [GitHub](https://github.com/wilderye/green-light-activation-diagnostics)

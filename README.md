@@ -47,6 +47,10 @@ https://github.com/wilderye/green-light-activation-diagnostics
 - **自动清理**：超过 7 天或累计超过 500 条的记录会自动删掉。你也可以在设置里手动清除。
 - **结果可信度**：「哪些条目被送给了 AI」这部分是 100% 准确的，来自 SillyTavern 自己的事件。「为什么没被送」的分析是插件自己推理的，绝大多数情况准确，但个别复杂规则可能分析不到。
 
+## 开源协议
+
+本项目基于 [GNU Affero General Public License v3.0](./LICENSE)（AGPL-3.0-only）开源。
+
 ## 作者
 
 荒行 · [GitHub](https://github.com/wilderye/green-light-activation-diagnostics)
