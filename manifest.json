@@ -8,7 +8,7 @@
   "css": "style.css",
   "minimum_client_version": "1.15.0",
   "author": "荒行",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homePage": "https://github.com/noz/green-light-activation-diagnostics",
   "auto_update": true,
   "hooks": {

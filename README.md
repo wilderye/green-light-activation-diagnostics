@@ -30,6 +30,8 @@ https://github.com/wilderye/green-light-activation-diagnostics
 
 装完刷新页面就能用。
 
+版本要求：SillyTavern **1.15.0 或更高版本**。1.14 及更早版本缺少完整的世界书扫描事件，无法支持本插件承诺的完整诊断能力。
+
 ## 怎么用
 
 打开「扩展」→「绿灯激活诊断器」，可以看到开关和相关调试选项。

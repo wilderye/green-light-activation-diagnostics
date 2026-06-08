@@ -30,6 +30,8 @@ https://github.com/wilderye/green-light-activation-diagnostics
 
 Refresh the page after installing. That's it.
 
+Version requirement: SillyTavern **1.15.0 or newer**. Version 1.14 and earlier do not expose the full World Info scan event required for this plugin's complete diagnostics.
+
 ## How to use
 
 Open Extensions → Green Light Activation Diagnostics to find the toggle and related debug options.
