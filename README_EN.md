@@ -1,4 +1,4 @@
-**中文** | [中文版](./README.md)
+[中文](./README.md) | **English**
 
 # Green Light Activation Diagnostics
 

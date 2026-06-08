@@ -1,4 +1,4 @@
-**English** | [English Version](./README_EN.md)
+**中文** | [English](./README_EN.md)
 
 # 绿灯激活诊断器
 
