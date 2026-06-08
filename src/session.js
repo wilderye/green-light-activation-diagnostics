@@ -1,4 +1,19 @@
-export function createSessionStore({ getCharacterCardFields, extension_prompts } = {}) {
+function snapshotWorldInfoMatchSettings(getWorldInfoMatchSettings) {
+  try {
+    const settings = getWorldInfoMatchSettings?.() ?? {};
+    return {
+      caseSensitive: Boolean(settings.caseSensitive),
+      matchWholeWords: Boolean(settings.matchWholeWords),
+    };
+  } catch {
+    return {
+      caseSensitive: false,
+      matchWholeWords: false,
+    };
+  }
+}
+
+export function createSessionStore({ getCharacterCardFields, extension_prompts, getWorldInfoMatchSettings } = {}) {
   let activeSession = null;
   let nextId = 1;
 
@@ -42,6 +57,7 @@ export function createSessionStore({ getCharacterCardFields, extension_prompts }
       chatMessages,
       fieldSources,
       injectionSources,
+      worldInfoMatchSettings: snapshotWorldInfoMatchSettings(getWorldInfoMatchSettings),
     };
     return activeSession;
   }

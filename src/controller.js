@@ -5,6 +5,7 @@ import { buildDiagnosticRecord } from './diagnostic-builder.js';
 import {
   createTemporaryDiagnosticsStore,
   getChatStorageScope,
+  getMessageSignature,
   getSwipeId,
 } from './storage.js';
 import {
@@ -70,6 +71,7 @@ export function createExtensionController(nativeDeps = {}) {
       hasRecord: ({ messageId, swipeId }) => Boolean(diagnosticsStore.readDiagnosticRecord({
         messageId,
         swipeId: swipeId ?? getSwipeId(nativeDeps.chat?.[messageId]),
+        messageSignature: getMessageSignature(nativeDeps.chat?.[messageId]),
       })),
       onClick: ({ messageId }) => {
         openDiagnosticsForMessage(messageId);
@@ -86,6 +88,7 @@ export function createExtensionController(nativeDeps = {}) {
     const record = diagnosticsStore.readDiagnosticRecord({
       messageId,
       swipeId: getSwipeId(nativeDeps.chat?.[messageId]),
+      messageSignature: getMessageSignature(nativeDeps.chat?.[messageId]),
     });
     openDiagnosticsPanel({
       record,
@@ -123,6 +126,7 @@ export function createExtensionController(nativeDeps = {}) {
       diagnosticsStore.writeDiagnosticRecord({
         messageId,
         swipeId,
+        messageSignature: getMessageSignature(message),
         record,
       });
     }

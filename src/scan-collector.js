@@ -40,7 +40,12 @@ export function createScanCollector() {
   let current = null;
 
   function start(session) {
-    current = session ? { session, loops: [], finalActivatedEntries: [] } : null;
+    current = session ? {
+      session,
+      loops: [],
+      finalActivatedEntries: [],
+      finalActivatedCaptured: false,
+    } : null;
   }
 
   function onScanDone(payload) {
@@ -77,7 +82,9 @@ export function createScanCollector() {
 
   function onActivated(entries) {
     if (!current) return;
+    if (current.finalActivatedCaptured) return;
     current.finalActivatedEntries = cloneEntries(entries);
+    current.finalActivatedCaptured = true;
   }
 
   function finish() {

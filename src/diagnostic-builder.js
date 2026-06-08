@@ -3,6 +3,8 @@ import { classifyNativeOutcome, getEntryDisplayName, isGreenLightEntry } from '.
 import { getI18n } from './i18n.js';
 import { entryKey } from './scan-collector.js';
 
+const WORLD_INFO_SCAN_STATE_RECURSION = 2;
+
 function compactMatch(match = {}) {
   return {
     key: match.key,
@@ -114,6 +116,7 @@ export function buildDiagnosticRecord({ collected, matcher, settings, messageId,
   }
 
   const recursionTexts = (collected?.loops ?? [])
+    .filter(loop => loop.stateCurrent === WORLD_INFO_SCAN_STATE_RECURSION)
     .map(loop => loop.activatedText)
     .filter(Boolean);
 

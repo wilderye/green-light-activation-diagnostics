@@ -23,6 +23,14 @@ function buildSnippet(text, index, length, settings = {}) {
   return `${prefix}${text.slice(start, end)}${suffix}`;
 }
 
+function getEffectiveMatchSettings(entry, session = {}) {
+  const globalMatchSettings = session.worldInfoMatchSettings ?? {};
+  return {
+    caseSensitive: entry.caseSensitive ?? globalMatchSettings.caseSensitive ?? false,
+    matchWholeWords: entry.matchWholeWords ?? globalMatchSettings.matchWholeWords ?? false,
+  };
+}
+
 function sourceRank(source) {
   if (source.sourceType === 'chat') return 0;
   if (source.sourceType === 'persona') return 1;
@@ -60,10 +68,10 @@ function makeMatch({ key, source, sourceOrder, index, length, text, settings }) 
   };
 }
 
-function findPlainTextMatches({ key, source, sourceOrder, entry, settings }) {
+function findPlainTextMatches({ key, source, sourceOrder, entry, settings, matchSettings }) {
   const text = String(source.text ?? '');
-  const caseSensitive = entry.caseSensitive ?? false;
-  const matchWholeWords = entry.matchWholeWords ?? false;
+  const caseSensitive = matchSettings?.caseSensitive ?? false;
+  const matchWholeWords = matchSettings?.matchWholeWords ?? false;
   const haystack = caseSensitive ? text : text.toLowerCase();
   const needle = caseSensitive ? key : key.toLowerCase();
 
@@ -116,7 +124,7 @@ function findRegexMatches({ key, source, sourceOrder, regex, settings }) {
   ];
 }
 
-function findMatchesForKey({ key, sources, entry, settings, parseRegexFromString }) {
+function findMatchesForKey({ key, sources, entry, settings, parseRegexFromString, matchSettings }) {
   const normalizedKey = trimKey(key);
   if (!normalizedKey) return [];
 
@@ -125,7 +133,7 @@ function findMatchesForKey({ key, sources, entry, settings, parseRegexFromString
     if (regex) {
       return findRegexMatches({ key: normalizedKey, source, sourceOrder, regex, settings });
     }
-    return findPlainTextMatches({ key: normalizedKey, source, sourceOrder, entry, settings });
+    return findPlainTextMatches({ key: normalizedKey, source, sourceOrder, entry, settings, matchSettings });
   });
 
   return matches.sort(compareMatches);
@@ -181,15 +189,16 @@ export function getEligibleSourcesForEntry(entry, session = {}, recursionTexts =
 export function createMatcher({ parseRegexFromString, world_info_logic } = {}) {
   const logic = { ...FALLBACK_WORLD_INFO_LOGIC, ...(world_info_logic ?? {}) };
 
-  function findMatchesForKeys(keys, sources, entry, settings) {
+  function findMatchesForKeys(keys, sources, entry, settings, session) {
+    const matchSettings = getEffectiveMatchSettings(entry, session);
     return (keys ?? []).flatMap(key => (
-      findMatchesForKey({ key, sources, entry, settings, parseRegexFromString })
+      findMatchesForKey({ key, sources, entry, settings, parseRegexFromString, matchSettings })
     )).sort(compareMatches);
   }
 
   function explainEntry(entry, session, recursionTexts = [], settings = {}) {
     const sources = getEligibleSourcesForEntry(entry, session, recursionTexts);
-    const primaryMatches = findMatchesForKeys(entry.key, sources, entry, settings);
+    const primaryMatches = findMatchesForKeys(entry.key, sources, entry, settings, session);
     if (!primaryMatches.length) {
       return baseExplanation();
     }
@@ -221,7 +230,14 @@ export function createMatcher({ parseRegexFromString, world_info_logic } = {}) {
     const missingSecondaryKeys = [];
 
     for (const key of secondaryKeys) {
-      const matches = findMatchesForKey({ key, sources, entry, settings, parseRegexFromString });
+      const matches = findMatchesForKey({
+        key,
+        sources,
+        entry,
+        settings,
+        parseRegexFromString,
+        matchSettings: getEffectiveMatchSettings(entry, session),
+      });
       if (matches.length) {
         secondaryMatchesByKey.set(key, matches[0]);
       } else {

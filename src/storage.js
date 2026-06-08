@@ -12,6 +12,16 @@ export function getSwipeId(message) {
   return Number.isFinite(swipeId) && swipeId >= 0 ? swipeId : 0;
 }
 
+export function getMessageSignature(message) {
+  if (!message) return null;
+
+  return {
+    sendDate: String(message.send_date ?? ''),
+    isUser: Boolean(message.is_user),
+    textHash: hashString(String(message.mes ?? '')),
+  };
+}
+
 function createEmptyData() {
   return {
     version: STORE_VERSION,
@@ -69,6 +79,27 @@ export function getChatStorageScope(chat = []) {
 function coerceKey(value) {
   const number = Number(value ?? 0);
   return String(Number.isFinite(number) && number >= 0 ? number : 0);
+}
+
+function normalizeMessageSignature(signature) {
+  if (!signature || typeof signature !== 'object') return null;
+
+  return {
+    sendDate: String(signature.sendDate ?? ''),
+    isUser: Boolean(signature.isUser),
+    textHash: String(signature.textHash ?? ''),
+  };
+}
+
+function signaturesMatch(storedSignature, requestedSignature) {
+  const stored = normalizeMessageSignature(storedSignature);
+  const requested = normalizeMessageSignature(requestedSignature);
+  if (!requested) return true;
+  if (!stored) return false;
+
+  return stored.sendDate === requested.sendDate
+    && stored.isUser === requested.isUser
+    && stored.textHash === requested.textHash;
 }
 
 function collectRecords(data, scopeKey = null) {
@@ -204,14 +235,15 @@ export function createTemporaryDiagnosticsStore({
     return String(getScopeKey?.() || HASH_PREFIX + 'default');
   }
 
-  function readDiagnosticRecord({ messageId, swipeId = 0 } = {}) {
+  function readDiagnosticRecord({ messageId, swipeId = 0, messageSignature } = {}) {
     const data = loadData();
     const scope = data.scopes[currentScopeKey()];
     const envelope = scope?.messages?.[coerceKey(messageId)]?.swipes?.[coerceKey(swipeId)];
+    if (!signaturesMatch(envelope?.messageSignature, messageSignature)) return null;
     return envelope?.record ?? null;
   }
 
-  function writeDiagnosticRecord({ messageId, swipeId = 0, record } = {}) {
+  function writeDiagnosticRecord({ messageId, swipeId = 0, record, messageSignature } = {}) {
     if (messageId == null || !record) return false;
 
     const data = loadData();
@@ -236,6 +268,7 @@ export function createTemporaryDiagnosticsStore({
     messageRecord.swipes[swipeKey] = {
       updatedAt: timestamp,
       record,
+      messageSignature: normalizeMessageSignature(messageSignature),
     };
 
     pruneData(data, {

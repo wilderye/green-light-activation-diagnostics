@@ -37,7 +37,7 @@ const TRANSLATIONS = Object.freeze({
       statJoined: '已生效',
       statBlocked: '被拦截',
       filterNotes: Object.freeze({
-        matched_not_joined: '这里会显示已进入候选后被拦截的条目，也会补上插件能推断出的早期筛选，比如二级条件没过、同组落选、冷却或延迟。少数酒馆没有暴露上下文的规则，仍可能不会列出来。',
+        matched_not_joined: '这里显示被酒馆列为候选、但最终没加入提示词的条目和插件推断出的早期筛选，例如二级条件未满足、同组落选、冷却/延迟、生成类型不适用。无法列出酒馆没有实际扫描到的条目，如递归设置导致的符合条件的条目未被扫描。',
       }),
       reasons: Object.freeze({
         native_joined: '原生确认已激活',
@@ -110,7 +110,7 @@ const TRANSLATIONS = Object.freeze({
       statJoined: 'Active',
       statBlocked: 'Blocked',
       filterNotes: Object.freeze({
-        matched_not_joined: 'This shows entries that reached the candidate stage but did not activate. It also adds early filters the plugin can infer, such as missing secondary conditions, losing a group roll, cooldown, or delay. A few rules that SillyTavern does not expose may still be missing.',
+        matched_not_joined: 'This shows entries that SillyTavern listed as candidates but did not add to the final prompt, plus early filters inferred by the plugin, such as unmet secondary conditions, losing to another entry in the same group, cooldown/delay, or generation type filters. It cannot list entries SillyTavern did not actually scan, such as otherwise eligible entries that were not scanned because of recursion settings.',
       }),
       reasons: Object.freeze({
         native_joined: 'Confirmed activated by SillyTavern',

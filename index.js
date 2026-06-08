@@ -7,8 +7,21 @@ import {
   saveSettingsDebounced,
 } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
-import { parseRegexFromString, world_info_logic, world_info_position } from '../../../world-info.js';
+import {
+  parseRegexFromString,
+  world_info_case_sensitive,
+  world_info_logic,
+  world_info_match_whole_words,
+  world_info_position,
+} from '../../../world-info.js';
 import { createActivationRuntime } from './src/activation.js';
+
+function getWorldInfoMatchSettings() {
+  return {
+    caseSensitive: Boolean(world_info_case_sensitive),
+    matchWholeWords: Boolean(world_info_match_whole_words),
+  };
+}
 
 const nativeDeps = {
   chat,
@@ -21,6 +34,7 @@ const nativeDeps = {
   parseRegexFromString,
   world_info_logic,
   world_info_position,
+  getWorldInfoMatchSettings,
 };
 
 const activation = createActivationRuntime({
