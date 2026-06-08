@@ -8,6 +8,7 @@ import {
 } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 import { parseRegexFromString, world_info_logic, world_info_position } from '../../../world-info.js';
+import { createActivationRuntime } from './src/activation.js';
 
 const nativeDeps = {
   chat,
@@ -22,14 +23,20 @@ const nativeDeps = {
   world_info_position,
 };
 
-let controller;
+const activation = createActivationRuntime({
+  nativeDeps,
+  createController: async deps => {
+    const { createExtensionController } = await import('./src/controller.js');
+    return createExtensionController(deps);
+  },
+});
+
+activation.startLegacyFallback();
 
 export async function activateGreenLightActivationDiagnostics() {
-  const { createExtensionController } = await import('./src/controller.js');
-  controller = createExtensionController(nativeDeps);
-  controller.activate();
+  return activation.activateFromHook();
 }
 
 globalThis.greenLightActivationDiagnostics_captureGenerationInput = async (coreChat, contextSize, abort, type) => {
-  controller?.captureGenerationInput(coreChat, contextSize, abort, type);
+  return activation.captureGenerationInput(coreChat, contextSize, abort, type);
 };
