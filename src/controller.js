@@ -5,7 +5,6 @@ import { buildDiagnosticRecord } from './diagnostic-builder.js';
 import {
   createTemporaryDiagnosticsStore,
   getChatStorageScope,
-  getMessageSignature,
   getSwipeId,
 } from './storage.js';
 import {
@@ -71,7 +70,6 @@ export function createExtensionController(nativeDeps = {}) {
       hasRecord: ({ messageId, swipeId }) => Boolean(diagnosticsStore.readDiagnosticRecord({
         messageId,
         swipeId: swipeId ?? getSwipeId(nativeDeps.chat?.[messageId]),
-        messageSignature: getMessageSignature(nativeDeps.chat?.[messageId]),
       })),
       onClick: ({ messageId }) => {
         openDiagnosticsForMessage(messageId);
@@ -88,7 +86,6 @@ export function createExtensionController(nativeDeps = {}) {
     const record = diagnosticsStore.readDiagnosticRecord({
       messageId,
       swipeId: getSwipeId(nativeDeps.chat?.[messageId]),
-      messageSignature: getMessageSignature(nativeDeps.chat?.[messageId]),
     });
     openDiagnosticsPanel({
       record,
@@ -99,38 +96,67 @@ export function createExtensionController(nativeDeps = {}) {
     });
   }
 
-  async function onAiMessageRendered(messageId) {
-    const collected = collector.finish();
-    if (collected && settings.enabled && settings.saveDiagnostics) {
-      const message = nativeDeps.chat?.[messageId];
-      if (!message) {
-        refreshButtons();
-        refreshSettingsPanel();
-        return;
-      }
+  function normalizeGenerationType(type) {
+    return type ?? 'normal';
+  }
 
-      const swipeId = getSwipeId(message);
-      const record = buildDiagnosticRecord({
-        collected,
-        matcher,
-        settings,
-        messageId,
-        swipeId,
-        locale: getLocale(),
-      });
+  function generationTypesMatch(sessionType, eventType) {
+    return normalizeGenerationType(sessionType) === normalizeGenerationType(eventType);
+  }
 
-      if (settings.includeMatchedNotJoined === false) {
-        record.items = record.items.filter(item => item.nativeConfirmation.status === 'joined');
-      }
+  function writeCollectedRecord(collected, messageId, message) {
+    const swipeId = getSwipeId(message);
+    const record = buildDiagnosticRecord({
+      collected,
+      matcher,
+      settings,
+      messageId,
+      swipeId,
+      locale: getLocale(),
+    });
 
-      diagnosticsStore.writeDiagnosticRecord({
-        messageId,
-        swipeId,
-        messageSignature: getMessageSignature(message),
-        record,
-      });
+    if (settings.includeMatchedNotJoined === false) {
+      record.items = record.items.filter(item => item.nativeConfirmation.status === 'joined');
     }
 
+    diagnosticsStore.writeDiagnosticRecord({
+      messageId,
+      swipeId,
+      record,
+    });
+  }
+
+  async function onMessageReceived(messageId, type) {
+    const current = collector.getCurrent();
+    if (!current) {
+      refreshButtons();
+      refreshSettingsPanel();
+      return;
+    }
+
+    if (!generationTypesMatch(current.session?.generationType, type)) {
+      refreshButtons();
+      refreshSettingsPanel();
+      return;
+    }
+
+    const message = nativeDeps.chat?.[messageId];
+    if (!message || message.is_user) {
+      refreshButtons();
+      refreshSettingsPanel();
+      return;
+    }
+
+    const collected = collector.finish();
+    if (collected && settings.enabled && settings.saveDiagnostics) {
+      writeCollectedRecord(collected, messageId, message);
+    }
+
+    refreshButtons();
+    refreshSettingsPanel();
+  }
+
+  async function onAiMessageRendered() {
     refreshButtons();
     refreshSettingsPanel();
   }
@@ -142,6 +168,7 @@ export function createExtensionController(nativeDeps = {}) {
 
       nativeDeps.eventSource?.on?.(nativeDeps.event_types?.WORLDINFO_SCAN_DONE, collector.onScanDone);
       nativeDeps.eventSource?.on?.(nativeDeps.event_types?.WORLD_INFO_ACTIVATED, collector.onActivated);
+      nativeDeps.eventSource?.makeFirst?.(nativeDeps.event_types?.MESSAGE_RECEIVED, onMessageReceived);
       nativeDeps.eventSource?.on?.(nativeDeps.event_types?.CHARACTER_MESSAGE_RENDERED, onAiMessageRendered);
       nativeDeps.eventSource?.on?.(nativeDeps.event_types?.MESSAGE_SWIPED, () => refreshButtons());
 

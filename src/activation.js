@@ -1,6 +1,7 @@
 const REQUIRED_EVENT_TYPES = [
   'WORLDINFO_SCAN_DONE',
   'WORLD_INFO_ACTIVATED',
+  'MESSAGE_RECEIVED',
   'CHARACTER_MESSAGE_RENDERED',
 ];
 
@@ -11,6 +12,10 @@ export function getMissingFullDiagnosticsCapabilities(nativeDeps = {}) {
 
   if (typeof nativeDeps.eventSource?.on !== 'function') {
     missing.push('eventSource.on');
+  }
+
+  if (typeof nativeDeps.eventSource?.makeFirst !== 'function') {
+    missing.push('eventSource.makeFirst');
   }
 
   for (const eventType of REQUIRED_EVENT_TYPES) {

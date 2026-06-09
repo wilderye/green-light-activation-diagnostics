@@ -50,6 +50,7 @@ export function createScanCollector() {
 
   function onScanDone(payload) {
     if (!current) return;
+    if (current.finalActivatedCaptured) return;
 
     const all = payload?.new?.all ?? [];
     const successful = payload?.new?.successful ?? [];
