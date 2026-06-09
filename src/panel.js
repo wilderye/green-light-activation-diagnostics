@@ -39,8 +39,8 @@ function getReasonText(item, i18n) {
   const explanation = item.pluginExplanation ?? {};
   const recursionSources = getRecursionSourceList(item, i18n);
   if (explanation.recursionAttribution === 'sources' && recursionSources.length === 1) {
-    const text = i18n.recursionSingleSource(recursionSources[0]);
-    return explanation.delayedUntilRecursion ? `${text} · ${i18n.delayedRecursionHint}` : text;
+    const parts = i18n.recursionSingleSource(recursionSources[0]);
+    return explanation.delayedUntilRecursion ? [...parts, ` · ${i18n.delayedRecursionHint}`] : parts;
   }
   if (explanation.recursionAttribution === 'sources' && recursionSources.length > 1) {
     const text = i18n.recursionMultipleSources(recursionSources.length);
@@ -134,6 +134,26 @@ function element(document, tagName, className, text) {
   return node;
 }
 
+function renderReasonContent(document, reasonData) {
+  const container = element(document, 'div', 'green-light-diagnostics-item-reason');
+  if (!Array.isArray(reasonData)) {
+    container.textContent = String(reasonData ?? '');
+    return container;
+  }
+  for (const part of reasonData) {
+    if (typeof part === 'string') {
+      const lines = part.split('\n');
+      lines.forEach((line, i) => {
+        if (i > 0) container.append(document.createElement('br'));
+        if (line) container.append(document.createTextNode(line));
+      });
+    } else if (part?.type === 'value') {
+      container.append(element(document, 'span', 'green-light-diagnostics-source-value', part.text));
+    }
+  }
+  return container;
+}
+
 function renderItem(document, item) {
   const card = element(document, 'details', 'green-light-diagnostics-item');
   const summary = element(document, 'summary', 'green-light-diagnostics-item-summary');
@@ -160,16 +180,16 @@ function renderItem(document, item) {
       sourceItem.append(
         element(document, 'span', '', `${source.entryLabel} `),
         element(document, 'span', 'green-light-diagnostics-source-value', source.name),
-        element(document, 'span', '', ` ${source.keywordLabel} `),
-        element(document, 'span', 'green-light-diagnostics-source-key', source.key),
+        document.createElement('br'),
+        element(document, 'span', '', `${source.keywordLabel} `),
+        element(document, 'span', 'green-light-diagnostics-source-value', source.key),
       );
       sourceList.append(sourceItem);
     });
     sourceDetails.append(sourceSummary, sourceList);
     detailBody.append(sourceDetails);
   } else {
-    const reason = element(document, 'div', 'green-light-diagnostics-item-reason', item.reasonText);
-    detailBody.append(reason);
+    detailBody.append(renderReasonContent(document, item.reasonText));
   }
 
   if (item.pluginExplanation?.snippet) {
