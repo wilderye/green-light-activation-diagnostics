@@ -5,6 +5,7 @@ import {
   extension_prompts,
   getCharacterCardFields,
   saveSettingsDebounced,
+  substituteParams,
 } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 import {
@@ -30,6 +31,7 @@ const nativeDeps = {
   extension_prompts,
   getCharacterCardFields,
   saveSettingsDebounced,
+  substituteParams,
   extension_settings,
   parseRegexFromString,
   world_info_logic,

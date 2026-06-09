@@ -17,6 +17,15 @@ function getPrimaryKey(item) {
   return item.pluginExplanation?.primaryMatches?.[0]?.key ?? '';
 }
 
+function getRecursionSourceList(item, i18n) {
+  return (item.pluginExplanation?.recursionSources ?? []).map(source => ({
+    name: source.name || `UID ${source.uid ?? '?'}`,
+    key: source.key ?? '',
+    entryLabel: i18n.sourceEntryLabel,
+    keywordLabel: i18n.sourceKeywordLabel,
+  }));
+}
+
 function getFilters(i18n) {
   return FILTER_IDS.map(id => ({ id, label: i18n.filters[id] }));
 }
@@ -28,6 +37,26 @@ function getReasonText(item, i18n) {
   }
 
   const explanation = item.pluginExplanation ?? {};
+  const recursionSources = getRecursionSourceList(item, i18n);
+  if (explanation.recursionAttribution === 'sources' && recursionSources.length === 1) {
+    const text = i18n.recursionSingleSource(recursionSources[0]);
+    return explanation.delayedUntilRecursion ? `${text} · ${i18n.delayedRecursionHint}` : text;
+  }
+  if (explanation.recursionAttribution === 'sources' && recursionSources.length > 1) {
+    const text = i18n.recursionMultipleSources(recursionSources.length);
+    return explanation.delayedUntilRecursion ? `${text} · ${i18n.delayedRecursionHint}` : text;
+  }
+  if (explanation.recursionAttribution === 'missing_source') {
+    return i18n.recursionMissingSource;
+  }
+  if (explanation.recursionAttribution === 'delayed_source' && explanation.delayedUntilRecursion) {
+    const delayed = explanation.delayedUntilRecursion;
+    if (delayed.sourceType === 'chat' && delayed.sourceMessageIndex != null) {
+      return i18n.delayedChatMatch({ messageIndex: delayed.sourceMessageIndex, key: delayed.key });
+    }
+    return i18n.delayedNonChatMatch({ sourceType: delayed.sourceType ?? i18n.unknown, key: delayed.key });
+  }
+
   const key = getPrimaryKey(item);
   if (explanation.sourceType === 'chat' && explanation.sourceMessageIndex != null) {
     return i18n.chatMatch({ messageIndex: explanation.sourceMessageIndex, key });
@@ -43,6 +72,7 @@ function toItemModel(item, i18n) {
     statusLabel: i18n.status[item.nativeConfirmation?.status] ?? i18n.unknown,
     reasonText: getReasonText(item, i18n),
     primaryKey: getPrimaryKey(item),
+    recursionSourceList: getRecursionSourceList(item, i18n),
   };
 }
 
@@ -121,9 +151,26 @@ function renderItem(document, item) {
   summary.append(header);
 
   const detailBody = element(document, 'div', 'green-light-diagnostics-item-details');
-  const reason = element(document, 'div', 'green-light-diagnostics-item-reason', item.reasonText);
-  
-  detailBody.append(reason);
+  if (item.recursionSourceList?.length > 1) {
+    const sourceDetails = element(document, 'details', 'green-light-diagnostics-recursion-sources');
+    const sourceSummary = element(document, 'summary', 'green-light-diagnostics-item-reason', item.reasonText);
+    const sourceList = element(document, 'ol', 'green-light-diagnostics-recursion-source-list');
+    item.recursionSourceList.forEach(source => {
+      const sourceItem = element(document, 'li', 'green-light-diagnostics-recursion-source-item');
+      sourceItem.append(
+        element(document, 'span', '', `${source.entryLabel} `),
+        element(document, 'span', 'green-light-diagnostics-source-value', source.name),
+        element(document, 'span', '', ` ${source.keywordLabel} `),
+        element(document, 'span', 'green-light-diagnostics-source-key', source.key),
+      );
+      sourceList.append(sourceItem);
+    });
+    sourceDetails.append(sourceSummary, sourceList);
+    detailBody.append(sourceDetails);
+  } else {
+    const reason = element(document, 'div', 'green-light-diagnostics-item-reason', item.reasonText);
+    detailBody.append(reason);
+  }
 
   if (item.pluginExplanation?.snippet) {
     const snippet = element(document, 'blockquote', 'green-light-diagnostics-snippet', item.pluginExplanation.snippet);

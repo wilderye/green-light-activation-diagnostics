@@ -276,6 +276,32 @@ dialog.popup.green-light-diagnostics-popup-wrapper {
   opacity: 0.85;
 }
 
+.green-light-diagnostics-recursion-sources {
+  margin-bottom: 8px;
+}
+
+.green-light-diagnostics-recursion-sources summary {
+  cursor: pointer;
+}
+
+.green-light-diagnostics-recursion-source-list {
+  margin: 4px 0 0 18px;
+  padding: 0;
+  font-size: 0.8rem;
+  opacity: 0.72;
+}
+
+.green-light-diagnostics-recursion-source-item {
+  margin: 2px 0;
+}
+
+.green-light-diagnostics-source-value,
+.green-light-diagnostics-source-key {
+  font-size: 0.82rem;
+  opacity: 0.9;
+  color: color-mix(in srgb, var(--SmartThemeBodyColor) 82%, var(--SmartThemeQuoteColor));
+}
+
 .green-light-diagnostics-snippet {
   margin: 0;
   padding: 0 0 0 10px;

@@ -186,14 +186,30 @@ export function getEligibleSourcesForEntry(entry, session = {}, recursionTexts =
   return sources.filter(source => String(source.text ?? '').trim());
 }
 
-export function createMatcher({ parseRegexFromString, world_info_logic } = {}) {
+export function createMatcher({ parseRegexFromString, world_info_logic, substituteParams } = {}) {
   const logic = { ...FALLBACK_WORLD_INFO_LOGIC, ...(world_info_logic ?? {}) };
+
+  function substituteKey(key) {
+    const normalized = trimKey(key);
+    if (!normalized) return '';
+    if (typeof substituteParams !== 'function') return normalized;
+
+    try {
+      return trimKey(substituteParams(normalized));
+    } catch {
+      return normalized;
+    }
+  }
 
   function findMatchesForKeys(keys, sources, entry, settings, session) {
     const matchSettings = getEffectiveMatchSettings(entry, session);
     return (keys ?? []).flatMap(key => (
-      findMatchesForKey({ key, sources, entry, settings, parseRegexFromString, matchSettings })
+      findMatchesForKey({ key: substituteKey(key), sources, entry, settings, parseRegexFromString, matchSettings })
     )).sort(compareMatches);
+  }
+
+  function findPrimaryMatches(entry, sources, session = {}, settings = {}) {
+    return findMatchesForKeys(entry?.key, sources, entry, settings, session);
   }
 
   function explainEntry(entry, session, recursionTexts = [], settings = {}) {
@@ -225,7 +241,7 @@ export function createMatcher({ parseRegexFromString, world_info_logic } = {}) {
       return baseExplanation(explanationBase);
     }
 
-    const secondaryKeys = entry.keysecondary.map(trimKey).filter(Boolean);
+    const secondaryKeys = entry.keysecondary.map(substituteKey).filter(Boolean);
     const secondaryMatchesByKey = new Map();
     const missingSecondaryKeys = [];
 
@@ -268,5 +284,5 @@ export function createMatcher({ parseRegexFromString, world_info_logic } = {}) {
     });
   }
 
-  return { explainEntry };
+  return { explainEntry, findPrimaryMatches };
 }
